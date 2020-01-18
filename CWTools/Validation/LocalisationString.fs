@@ -83,6 +83,15 @@ module LocalisationString =
             | LocContextResult.WrongScope (c, actual, (expected : Scope list)) ->
                 Invalid (Guid.NewGuid(), [invManual (ErrorCodes.LocCommandWrongScope c (expected |> List.map (fun f -> f.ToString()) |> String.concat ", ") (actual.ToString())) (e.position) e.key None])
             | _ -> OK
+        let validateNewLinePlacement _ (e : LocEntry) =
+            let newLine = pchar '\n'
+            let lineBreak = newLine >>. newline
+            let paragraph = many1Satisfy (isNoneOf "\r\n")
+            let descParser = paragraph <|> many1Strings (paragraph >>. ((newline |>> string) <|> (lineBreak |>> string))) >>. paragraph
+            let parserResult = runParserOnString descParser () e.key e.desc
+            match parserResult with
+                | Success(_) -> OK
+                | Failure (_, _, locKey) -> Invalid (Guid.NewGuid(), [invManual (ErrorCodes.CustomError (sprintf "Localisation for %O does not follow style rules for newlines." locKey) Severity.Warning ) e.position e.key None])
         let validateLocMap (lang, (m : Map<string, LocEntry>)) =
             let keys = keys |> List.filter (fun (l, _) -> l = lang) |> List.map snd |> List.fold (fun a b -> LocKeySet.Union (a, b)) (LocKeySet.Empty(InsensitiveStringComparer()))
             m |> Map.map (fun _ e -> e.refs <&!&> checkRef hardcodedLocalisation lang keys e) |> Map.toList |> List.map snd |> List.fold (<&&>) OK
@@ -90,6 +99,8 @@ module LocalisationString =
             (m |> Map.map (fun _ e -> e.scopes <&!&> validateContextResult e) |> Map.toList |> List.map snd |> List.fold (<&&>) OK)
             <&&>
             (m |> Map.map validateQuotes |> Map.toList |> List.map snd |> List.fold (<&&>) OK)
+            <&&>
+            (m |> Map.map validateNewLinePlacement |> Map.toList |> List.map snd |> List.fold (<&&>) OK)
 
 
         let validateReplaceMe (lang, (m : Map<string, LocEntry>)) =
