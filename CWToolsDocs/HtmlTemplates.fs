@@ -17,24 +17,26 @@ let createTableOfContents (types : TypeDefinition list) =
 
 let valueTypeField enums (vt : ValueType) =
     match vt with
-    |(ValueType.Bool) -> "yes/no"
-    |(ValueType.Date) -> "date"
-    |(ValueType.Int (RulesParser.intFieldDefaultMinimum, RulesParser.intFieldDefaultMaximum)) -> "Integer"
-    |(ValueType.Int (RulesParser.intFieldDefaultMinimum, max)) -> sprintf "Integer below %i" max
-    |(ValueType.Int (min, RulesParser.intFieldDefaultMaximum)) -> sprintf "Integer above %i" min
-    |(ValueType.Int (min, max)) -> sprintf "Integer between %i and %i" min max
-    |(ValueType.Float (min, max)) when min = RulesParser.floatFieldDefaultMinimum && max = RulesParser.floatFieldDefaultMaximum -> "Float"
-    |(ValueType.Float (min, max)) when min = RulesParser.floatFieldDefaultMinimum -> sprintf "Float below %s" (max.ToString())
-    |(ValueType.Float (min, max)) when max = RulesParser.floatFieldDefaultMaximum -> sprintf "Float above %s" (min.ToString())
-    |(ValueType.Float (min, max)) -> sprintf "Float between %s and %s" (min.ToString()) (max.ToString())
-    |(ValueType.Percent) -> "percentage"
-    |(ValueType.Enum enumName) ->
+    |(Bool) -> "yes/no"
+    |(DateTime)
+    |(Date) -> "Date with YYYY.MM.dd format, starting from 1.1.1"
+    |(Int (RulesParserConstants.IntFieldDefaultMinimum, RulesParserConstants.IntFieldDefaultMaximum)) -> "Integer"
+    |(Int (RulesParserConstants.IntFieldDefaultMinimum, max)) -> sprintf "Integer below %i" max
+    |(Int (min, RulesParserConstants.IntFieldDefaultMaximum)) -> sprintf "Integer above %i" min
+    |(Int (min, max)) -> sprintf "Integer between %i and %i" min max
+    |(Float (min, max)) when min = RulesParserConstants.floatFieldDefaultMinimum && max = RulesParserConstants.floatFieldDefaultMaximum -> "Float"
+    |(Float (min, max)) when min = RulesParserConstants.floatFieldDefaultMinimum -> sprintf "Float below %s" (max.ToString())
+    |(Float (min, max)) when max = RulesParserConstants.floatFieldDefaultMaximum -> sprintf "Float above %s" (min.ToString())
+    |(Float (min, max)) -> sprintf "Float between %s and %s" (min.ToString()) (max.ToString())
+    |(Percent) -> "percentage"
+    |(Enum enumName) ->
         let enumDef = enums |> List.tryFind (fun e -> e.key = enumName)
         enumDef |> Option.map (fun ed -> (ed.values |> String.concat ", "))
                 |> Option.defaultValue ""
-    | ValueType.CK2DNA -> "ck2DNA"
-    | ValueType.CK2DNAProperty -> "ck2DNAproperty"
-    | ValueType.IRFamilyName -> "IRFamilyName"
+    | CK2DNA -> "ck2DNA"
+    | CK2DNAProperty -> "ck2DNAproperty"
+    | IRFamilyName -> "IRFamilyName"
+    | STLNameFormat(_) -> "STLNameFormat"
 
 let createTypeFieldLink (typeType : TypeType) =
     match typeType with
@@ -46,13 +48,18 @@ let createTypeFieldLink (typeType : TypeType) =
     | TypeType.Simple s ->  a [ _href ("#"+s)] [str ("<"+s+">")]
     | _ -> str ""
 
-let fieldToText enums (field : NewField) =
+let fieldToText (enums : EnumDefinition list) (field : NewField) (postFix : string option) =
     match field with
-    | SpecificField (SpecificValue value) -> str (stringManager.GetStringForID value.normal)
+    | SpecificField (SpecificValue value) -> str (match postFix with 
+                                                    | None -> stringManager.GetStringForID value.normal 
+                                                    | Some x -> sprintf "%s of subtype %s" (stringManager.GetStringForID value.normal) x )
     | TypeField tt -> createTypeFieldLink tt
     | ValueField (vt) -> str (valueTypeField enums vt)
-    | LocalisationField true -> str "Synchronised localisation key"
-    | LocalisationField false -> str "Localisation key"
+    | LocalisationField (synced, isInline) ->
+        match synced, isInline with
+        | (true, false) -> str "Synchronised localisation key"
+        | (false, false) -> str "Localisation key"
+        | (_, true) -> str  "Inline localisation key"
     | FilepathField (prefix, extension) ->
         match prefix, extension with
         | None, None -> str "Filepath"
@@ -63,13 +70,14 @@ let fieldToText enums (field : NewField) =
     | ScalarField (ScalarValue) -> str "Scalar"
     | ScopeField (scope) -> str (sprintf "Scope object in %O scope" scope)
     // TODO more detail
-    | VariableField (isInt, (min, max)) ->
+    | VariableField (isInt, (_, _)) ->
         match isInt with
         | true -> str "Integer or integer variable"
         | false -> str "Float or float variable"
     | VariableGetField v -> str (sprintf "A \"%s\" value" v)
     // TODO clearer
     | VariableSetField v -> str (sprintf "Scalar, a \"%s\" value" v)
+    | SingleAliasClauseField (_) -> str ""
     | ValueScopeField _
     | AliasValueKeysField _ ->
         // TODO better for these
@@ -79,7 +87,10 @@ let fieldToText enums (field : NewField) =
     | SubtypeField _
     | SingleAliasField _
     | MarkerField _
-    | AliasField _ ->
+    | JominiGuiField _
+    | AliasField _ 
+    | IgnoreField _ 
+    | IgnoreMarkerField _ ->
         str ""
     // | _ -> str ""
 
@@ -88,8 +99,11 @@ let rhsFieldToText (enums : EnumDefinition list) (field : NewField) =
     | SpecificField (SpecificValue value) -> str (stringManager.GetStringForID value.normal)
     | TypeField tt -> createTypeFieldLink tt
     | ValueField (vt) -> str (valueTypeField enums vt)
-    | LocalisationField true -> str "Synchronised localisation key"
-    | LocalisationField false -> str "Localisation key"
+    | LocalisationField (synced, isInline) ->
+        match synced, isInline with
+        | (true, false) -> str "Synchronised localisation key"
+        | (false, false) -> str "Localisation key"
+        | (_, true) -> str  "Inline localisation key"
     | FilepathField (prefix, extension) ->
         match prefix, extension with
         | None, None -> str "Filepath"
@@ -100,13 +114,14 @@ let rhsFieldToText (enums : EnumDefinition list) (field : NewField) =
     | ScalarField (ScalarValue) -> str "Scalar"
     | ScopeField (scope) -> str (sprintf "Scope object in %O scope" scope)
     // TODO more detail
-    | VariableField (isInt, (min, max)) ->
+    | VariableField (isInt, (_, _)) ->
         match isInt with
         | true -> str "Integer or integer variable"
         | false -> str "Float or float variable"
     | VariableGetField v -> str (sprintf "A \"%s\" value" v)
     // TODO clearer
     | VariableSetField v -> str (sprintf "Scalar, a \"%s\" value" v)
+    | SingleAliasClauseField (_) -> str ""
     | ValueScopeField _
     | AliasValueKeysField _ ->
         // TODO better for these
@@ -115,9 +130,13 @@ let rhsFieldToText (enums : EnumDefinition list) (field : NewField) =
     | TypeMarkerField _
     | SubtypeField _
     | SingleAliasField _
+    | JominiGuiField _
     | MarkerField _ ->
         str ""
     | AliasField x -> str (x + " fields")
+    | IgnoreField _ 
+    | IgnoreMarkerField _
+        -> str ""
 
 let replaceScopesToText (replaceScopes : ReplaceScopes) =
     let rootText = replaceScopes.root |> Option.map (fun r -> sprintf "ROOT: %s" (r.ToString()))
@@ -132,28 +151,40 @@ let replaceScopesToText (replaceScopes : ReplaceScopes) =
     | None, Some ft -> ft
     | None, None -> ""
 
+let getMinText (options: Options) =
+    match options.min, options.strictMin with
+    | 0, _ -> "Optional"
+    | _, true -> "Required"
+    | _, false -> "Recommended"
+
 let getReqCount (options : Options) =
     match options.min, options.max with
-    | 0, 1 -> "Optional"
-    | 0, RulesParser.cardinalityDefaultMaximum -> "Optional, many"
-    | 0, x -> sprintf "Optional, up to %i" x
-    | 1, 1 -> "Required"
-    | 1, RulesParser.cardinalityDefaultMaximum -> "Required, many"
-    | 1, x -> sprintf "Required, up to %i" x
-    | x, y -> sprintf "Min %i, up to %i" x y
+    | 0, 1
+    | 1, 1 -> getMinText(options)
+    | 0, RulesParserConstants.CardinalityDefaultMaximum
+    | 1, RulesParserConstants.CardinalityDefaultMaximum -> sprintf "%s, many" (getMinText(options))
+    | 0, x
+    | 1, x -> sprintf "%s, up to %i" (getMinText(options)) x
+    | x, y -> (sprintf "%s min %i, up to %i"(getMinText(options)) x y).TrimStart()
 
-let rec ruleTemplate (enums : EnumDefinition list) (maxDepth : int) (indent : int) ((rule, options) : NewRule) =
-    let lhs = rule |> (function |NodeRule (left, _) -> Some left |LeafRule (left, _) -> Some left |LeafValueRule left -> Some left |ValueClauseRule _ -> None |SubtypeRule _ -> None)
+let rec ruleTemplate (enums : EnumDefinition list) (maxDepth : int) (indent : int) (_lshPostfix : string option) ((ruleType, options) : NewRule ) =
     let colspan = (maxDepth - indent).ToString()
     let reqCount = td [] [str (getReqCount options)]
-    match rule with
+
+    let _lshPostfix =
+        let displayName = ruleType |> (function |SubtypeRule (displayname, _, _)  ->  Some displayname | _ -> None) 
+        match displayName with
+        | Some x -> Some x
+        | None -> _lshPostfix
+
+    match ruleType with
     | LeafRule (left, right) ->
-        let lhs = td [ _colspan colspan] [(fieldToText enums left)]
+        let lhs = td [ _colspan colspan] [(fieldToText enums left _lshPostfix)]
         let rhs = td [] [(rhsFieldToText enums right)]
         let desc = td [] [str (options.description |> Option.defaultValue "")]
         [(tr [] [lhs; desc; reqCount; rhs])]
     | NodeRule (left, [LeafRule(AliasField x, _), innerOptions]) ->
-        let lhs = td [_colspan colspan] [(fieldToText enums left)]
+        let lhs = td [_colspan colspan] [(fieldToText enums left _lshPostfix)]
         let desc = td [] [str (options.description |> Option.defaultValue "")]
         let scopes = options.replaceScopes |> Option.map replaceScopesToText
         let rhsText = if scopes.IsSome then (x + " block, with scopes " + scopes.Value) else (x + " block")
@@ -162,20 +193,22 @@ let rec ruleTemplate (enums : EnumDefinition list) (maxDepth : int) (indent : in
     | NodeRule (left, inner) ->
         let desc = td [_colspan colspan] [str (options.description |> Option.defaultValue "")]
         let rhs = td [] [strong [] [str "block, containing:"]]
-        let inners = (inner |> List.collect (ruleTemplate enums maxDepth (indent + 1)))
-        let lhs = td [ _rowspan ((inners.Length + 1).ToString()); ] [ strong [] [(fieldToText enums left)]]
+        let inners = (inner |> List.collect (ruleTemplate enums maxDepth (indent + 1) _lshPostfix))
+        let lhs = td [ _rowspan ((inners.Length + 1).ToString()); ] [ strong [] [(fieldToText enums left _lshPostfix)]]
         ((tr [] ([lhs; desc; reqCount; rhs]))::inners)
 
     | LeafValueRule (left) ->
-        let lhs = td [_colspan colspan] [(fieldToText enums left)]
+        let lhs = td [_colspan colspan] [(fieldToText enums left _lshPostfix)]
         let desc = td [] [str (options.description |> Option.defaultValue "")]
         [(tr [] [lhs; desc; reqCount; td [] [str ""]])]
-    | SubtypeRule(_,_, inner) -> inner |> List.collect (ruleTemplate enums maxDepth indent)
+    | ValueClauseRule (inner) -> inner |> List.collect (ruleTemplate enums maxDepth indent _lshPostfix)
+    | SubtypeRule(_,_, inner) -> inner |> List.collect (ruleTemplate enums maxDepth indent _lshPostfix)
+    
     // | _ -> []
     // lhs |> Option.map fieldToText
     //     |> Option.map (fun t -> tr [] [td [] [str t]; td [] [str (options.description |> Option.defaultValue "")];])
 
-let rec getTypeBlockDepth (depth : int) ((rule, options): NewRule) =
+let rec getTypeBlockDepth (depth : int) ((rule, _): NewRule) =
     match rule with
     | SubtypeRule (_, _, inner) ->
         inner |> List.map (getTypeBlockDepth (depth)) |> List.max
@@ -185,19 +218,56 @@ let rec getTypeBlockDepth (depth : int) ((rule, options): NewRule) =
         inner |> List.map (getTypeBlockDepth (depth + 1)) |> List.max
     | _ -> depth
 
-let typeBlock (enums : EnumDefinition list) ((typeDef : TypeDefinition), ((rule, options): NewRule)) =
-    let _, rules = rule |> (function |NodeRule (l, r) -> l, r)
-    let typeBlockDepth = getTypeBlockDepth 0 (rule, options)
+let extractRulesFromRuleType (ruleType: RuleType) : NewRule list =
+    let rules = ruleType |> (function
+        | NodeRule (_, r) -> r
+        | SubtypeRule(_, _, r) -> r
+        | ValueClauseRule (r) -> r
+        | LeafValueRule(_)
+        | LeafRule (_) -> [] )
+    rules
+
+
+let subTypeBlock (enums: EnumDefinition list) ((subTypeDef : SubTypeDefinition)) =   
+    let typeBlockDepth =
+        match subTypeDef.rules |> List.map (getTypeBlockDepth 0) with
+        | [] -> 0
+        | x -> List.max x
+
+    let subTypeName = subTypeDef.name
+    let tableHeader = tr [] [th [ _colspan (typeBlockDepth.ToString())] [str "field"]; th [] [str "description"]; th [] [str "required"] ;th [] [str "rhs"]]
+    div [] [
+        h3 [ _class "subtitle"; _id subTypeName; _style "margin-bottom:0.3em !important; margin-top:1em" ] [ (sprintf "subtype %s" subTypeName) |> str]
+        table [ _class "table is-striped is-fullwidth"] (tableHeader::(subTypeDef.rules |> List.collect (ruleTemplate enums typeBlockDepth 0 None))) ]
+
+let typeBlock (enums : EnumDefinition list) ((typeDef : TypeDefinition), ((ruleType, options): NewRule)) =  
+    let rules = extractRulesFromRuleType ruleType
+
+    let typeBlockDepth = getTypeBlockDepth 0 (ruleType, options)
     let typeName = typeDef.name
     let tableHeader = tr [] [th [ _colspan (typeBlockDepth.ToString())] [str "field"]; th [] [str "description"]; th [] [str "required"] ;th [] [str "rhs"]]
+
+    let subTypeTables = typeDef.subtypes |> List.map (subTypeBlock enums)
+
+    let subTypeHtmlToggler = "this.parentNode.querySelector('div.subtypes-detail').hidden = !this.parentNode.querySelector('div.subtypes-detail').hidden; 
+                              this.querySelector('span.toggler').innerText = this.parentNode.querySelector('div.subtypes-detail').hidden ? '(+) ' : '(-) ';"
+
     let description =
         options.description |> Option.map ((sprintf "Description %s") >> str)
         |> Option.map (fun s -> div [] [s])
     div [] [
         h2 [ _class "title"; _id typeName] [ str typeName]
+        if subTypeTables.Length > 0 
+            then 
+                div [_class "tile is-parent";] [
+                    div [_class "table-container tile is-vertical notification";] [
+                        h4 [ _class "title is-4"; _style "cursor:pointer"; _id typeName; _onclick subTypeHtmlToggler] [ span [ _class "toggler"] [str "(+) "]; str "Subtypes"] 
+                        div [_class "subtypes-detail" ; _hidden] subTypeTables  ] ]
         div [] (typeDef.pathOptions.paths |> List.map ((sprintf "path: %s") >> str))
+        // div [] (typeDef.subtypes |> List.map (fun st -> st.name |> str))        
         div [] ([description] |> List.choose id)
-        table [ _class "table is-striped is-fullwidth"] (tableHeader::(rules |> List.collect (ruleTemplate enums typeBlockDepth 0))) ]
+        table [ _class "table is-striped is-fullwidth"] (tableHeader::(rules |> List.collect (ruleTemplate enums typeBlockDepth 0 None))) ]
+
 
 let rootRules (rootRules : RootRule list) (enums : EnumDefinition list) (types : TypeDefinition list) =
     let typeBlocks = ((rootRules)

@@ -10,12 +10,14 @@
       <Paket>True</Paket>
       <Link>paket-files/GiraffeViewEngine.fs</Link>
     </Compile>
-    <ProjectReference Include="..\CWTools\CWTools.fsproj">
+    <ProjectReference Include="../CWTools/CWTools.fsproj">
       <Name>CWTools.fsproj</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GiraffeViewEngine.fs" />
+    <None Include="./testconfig/**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="HtmlTemplates.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

@@ -419,11 +419,9 @@ type RuleValidationService
         let res = results |> List.choose (fun (s, res) -> res |> function |Invalid _ -> None |OK -> Some (s))
         let allSubtypes = res |> List.map (fun s -> s.name)
         let checkOnlyNotIf (s : SubTypeDefinition) = s.onlyIfNot |> List.exists (fun s2 -> List.contains s2 allSubtypes) |> not
-        eprintfn "ts %A %A %A" allSubtypes node.Key res
         let res = res |> List.filter checkOnlyNotIf
         let firstPushScope = res |> List.tryPick (fun s -> s.pushScope)
         firstPushScope, res |> List.map (fun s -> s.name)
-        // res |> List.tryPick fst, res |> List.map snd
 
     let rootId = StringResource.stringManager.InternIdentifierToken "root"
     let applyNodeRuleRoot (typedef : TypeDefinition) (rules : NewRule list) (options : Options) (node : IClause) =

@@ -15,7 +15,6 @@ open CWTools.Process.Scopes.IR
 open CWTools.Process.Scopes.Scopes
 open System.Text
 open CWTools.Games.LanguageFeatures
-open CWTools.Validation.IR.IRLocalisationString
 open CWTools.Validation.LocalisationString
 open CWTools.Process
 open System
@@ -26,30 +25,47 @@ open CWTools.Process.Localisation.ChangeLocScope
 
 module IRGameFunctions =
     type GameObject = GameObject<IRComputedData, IRLookup>
-    let processLocalisationFunction (localisationSettings : LocalisationEmbeddedSettings) (lookup : Lookup) =
-        let dataTypes = localisationSettings |> function | Jomini dts -> dts | _ -> { promotes = Map.empty; functions = Map.empty; dataTypes = Map.empty; dataTypeNames = Set.empty }
-        let localisationCommandValidator() = createJominiLocalisationCommandValidator dataTypes
-        let processLocalisation() = processJominiLocalisationBase (localisationCommandValidator()) defaultContext
-        let validateLocalisationCommand() = validateJominiLocalisationCommandsBase (localisationCommandValidator())
-        let eventtargets =
-            lookup.savedEventTargets |> Seq.map (fun (a, _, c) -> (a, c)) |> List.ofSeq
-                                     |> List.distinct
-                                     |> List.fold (fun map (k, s) -> if Map.containsKey k map then Map.add k (s::map.[k]) map else Map.add k ([s]) map) Map.empty
-        let definedvars =
-            (lookup.varDefInfo.TryFind "variable" |> Option.defaultValue [] |> List.map fst)
-        processLocalisation() eventtargets definedvars
 
-    let validateLocalisationCommandFunction (localisationSettings : LocalisationEmbeddedSettings) (lookup : Lookup) =
-        let dataTypes = localisationSettings |> function | Jomini dts -> dts | _ -> { promotes = Map.empty; functions = Map.empty; dataTypes = Map.empty; dataTypeNames = Set.empty }
-        let localisationCommandValidator() = createJominiLocalisationCommandValidator dataTypes
-        let validateLocalisationCommand() = validateJominiLocalisationCommandsBase (localisationCommandValidator())
-        let eventtargets =
-            lookup.savedEventTargets |> Seq.map (fun (a, _, c) -> (a, c)) |> List.ofSeq
-                                     |> List.distinct
-                                     |> List.fold (fun map (k, s) -> if Map.containsKey k map then Map.add k (s::map.[k]) map else Map.add k ([s]) map) Map.empty
-        let definedvars =
-            (lookup.varDefInfo.TryFind "variable" |> Option.defaultValue [] |> List.map fst)
-        validateLocalisationCommand() eventtargets definedvars
+    // let createLocalisationFunctions (localisationSettings : LocalisationEmbeddedSettings) =
+    //     fun (lookup : Lookup) ->
+    //         let dataTypes = localisationSettings |> function | Jomini dts -> dts | _ -> { promotes = Map.empty; functions = Map.empty; dataTypes = Map.empty; dataTypeNames = Set.empty }
+    //         let localisationCommandValidator = createJominiLocalisationCommandValidator dataTypes
+    //         let validateLocalisationCommand = validateJominiLocalisationCommandsBase localisationCommandValidator
+    //         let localisationCommandValidatorDefaultContext = localisationCommandValidator defaultContext
+    //         let processLocalisation = processJominiLocalisationBase localisationCommandValidatorDefaultContext
+    //         let eventtargets =
+    //             lookup.savedEventTargets |> Seq.map (fun (a, _, c) -> (a, c)) |> List.ofSeq
+    //                                      |> List.distinct
+    //                                      |> List.fold (fun map (k, s) -> if Map.containsKey k map then Map.add k (s::map.[k]) map else Map.add k ([s]) map) Map.empty
+    //         let definedvars =
+    //             (lookup.varDefInfo.TryFind "variable" |> Option.defaultValue [] |> List.map fst)
+    //         processLocalisation eventtargets definedvars, validateLocalisationCommand eventtargets definedvars
+
+
+    // let processLocalisationFunction (localisationSettings : LocalisationEmbeddedSettings) (lookup : Lookup) =
+    //     let dataTypes = localisationSettings |> function | Jomini dts -> dts | _ -> { promotes = Map.empty; functions = Map.empty; dataTypes = Map.empty; dataTypeNames = Set.empty }
+    //     let localisationCommandValidator = createJominiLocalisationCommandValidator dataTypes
+    //     let localisationCommandValidatorDefaultContext = localisationCommandValidator defaultContext
+    //     let processLocalisation = processJominiLocalisationBase localisationCommandValidatorDefaultContext
+    //     let eventtargets =
+    //         lookup.savedEventTargets |> Seq.map (fun (a, _, c) -> (a, c)) |> List.ofSeq
+    //                                  |> List.distinct
+    //                                  |> List.fold (fun map (k, s) -> if Map.containsKey k map then Map.add k (s::map.[k]) map else Map.add k ([s]) map) Map.empty
+    //     let definedvars =
+    //         (lookup.varDefInfo.TryFind "variable" |> Option.defaultValue [] |> List.map fst)
+    //     processLocalisation eventtargets definedvars
+
+    // let validateLocalisationCommandFunction (localisationSettings : LocalisationEmbeddedSettings) (lookup : Lookup) =
+    //     let dataTypes = localisationSettings |> function | Jomini dts -> dts | _ -> { promotes = Map.empty; functions = Map.empty; dataTypes = Map.empty; dataTypeNames = Set.empty }
+    //     let localisationCommandValidator = createJominiLocalisationCommandValidator dataTypes
+    //     let validateLocalisationCommand = validateJominiLocalisationCommandsBase localisationCommandValidator
+    //     let eventtargets =
+    //         lookup.savedEventTargets |> Seq.map (fun (a, _, c) -> (a, c)) |> List.ofSeq
+    //                                  |> List.distinct
+    //                                  |> List.fold (fun map (k, s) -> if Map.containsKey k map then Map.add k (s::map.[k]) map else Map.add k ([s]) map) Map.empty
+    //     let definedvars =
+    //         (lookup.varDefInfo.TryFind "variable" |> Option.defaultValue [] |> List.map fst)
+    //     validateLocalisationCommand eventtargets definedvars
 
     let globalLocalisation (game : GameObject) =
         let locParseErrors = game.LocalisationManager.LocalisationAPIs() <&!&> (fun (b, api) -> if b then validateLocalisationSyntax api.Results else OK)
@@ -66,7 +82,7 @@ module IRGameFunctions =
         let modifierOptions (modifier : ActualModifier) =
             let requiredScopes =
                 modifierCategoryManager.SupportedScopes modifier.category
-            {min = 0; max = 100; strictMin = true; leafvalue = false; description = None; pushScope = None; replaceScopes = None; severity = None; requiredScopes = requiredScopes; comparison = false; referenceDetails = None; keyRequiredQuotes = false; valueRequiredQuotes = false}
+            {min = 0; max = 100; strictMin = true; leafvalue = false; description = None; pushScope = None; replaceScopes = None; severity = None; requiredScopes = requiredScopes; comparison = false; referenceDetails = None; keyRequiredQuotes = false; valueRequiredQuotes = false; typeHint = None}
         lookup.coreModifiers
             |> List.map (fun c -> AliasRule ("modifier", NewRule(LeafRule(CWTools.Rules.RulesParser.specificField c.tag, ValueField (ValueType.Float (-1E+12M, 1E+12M))), modifierOptions c)))
 
@@ -242,7 +258,7 @@ module IRGameFunctions =
 
         let irMods =
             configs |> List.tryFind (fun (fn, _) -> Path.GetFileName fn = "modifiers.cwt")
-                    |> Option.map (fun (fn, ft) -> IRParser.loadModifiers fn ft)
+                    |> Option.map (fun (fn, ft) -> UtilityParser.loadModifiers fn ft)
                     |> Option.defaultValue []
 
         let irLocCommands =
@@ -319,6 +335,10 @@ type IRGame(setupSettings : IRSettings) =
     }
     do if scopeManager.Initialized |> not then eprintfn "%A has no scopes" (settings.rootDirectories |> List.head) else ()
 
+    let jominiLocDataTypes = settings.embedded.localisationCommands |> function | Jomini dts -> Some dts | _ -> None
+    let processLocalisationFunction lookup = (createJominiLocalisationFunctions jominiLocDataTypes lookup) |> fst
+    let validationLocalisationCommandFunction lookup = createJominiLocalisationFunctions jominiLocDataTypes lookup |> snd
+
 
     let rulesManagerSettings = {
         rulesSettings = settings.rules
@@ -333,15 +353,15 @@ type IRGame(setupSettings : IRSettings) =
         refreshConfigBeforeFirstTypesHook = refreshConfigBeforeFirstTypesHook
         refreshConfigAfterFirstTypesHook = refreshConfigAfterFirstTypesHook
         refreshConfigAfterVarDefHook = refreshConfigAfterVarDefHook
-        processLocalisation = IRGameFunctions.processLocalisationFunction (settings.embedded.localisationCommands)
-        validateLocalisation = IRGameFunctions.validateLocalisationCommandFunction (settings.embedded.localisationCommands)
+        processLocalisation = processLocalisationFunction
+        validateLocalisation = validationLocalisationCommandFunction
     }
     let game = GameObject<IRComputedData, IRLookup>.CreateGame
                 ((settings, "imperator", scriptFolders, Compute.Jomini.computeJominiData,
                     Compute.Jomini.computeJominiDataUpdate,
                      (IRLocalisationService >> (fun f -> f :> ILocalisationAPICreator)),
-                     IRGameFunctions.processLocalisationFunction (settings.embedded.localisationCommands),
-                     IRGameFunctions.validateLocalisationCommandFunction (settings.embedded.localisationCommands),
+                     processLocalisationFunction,
+                     validationLocalisationCommandFunction,
                      defaultContext,
                      noneContext,
                      Encoding.UTF8,

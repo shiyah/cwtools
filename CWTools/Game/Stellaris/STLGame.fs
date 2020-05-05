@@ -42,12 +42,6 @@ module STLGameFunctions =
             eventTargets = eventtargets |> List.map (fun s -> s, scopeManager.AnyScope)
             setVariables = definedVariables
         }
-    let processLocalisationFunction (commands, variableCommands) (lookup : Lookup) =
-        processLocalisation commands variableCommands (createLocDynamicSettings(lookup))
-
-    let validateLocalisationCommandFunction (commands, variableCommands) (lookup : Lookup) =
-        validateLocalisationCommand commands variableCommands (createLocDynamicSettings(lookup))
-
 
     let updateScriptedTriggers (game : GameObject) =
         let vanillaTriggers =
@@ -115,19 +109,19 @@ module STLGameFunctions =
         let modifierOptions (modifier : ActualModifier) =
             let requiredScopes =
                 modifierCategoryManager.SupportedScopes modifier.category
-            {min = 0; max = 100; strictMin = true; leafvalue = false; description = None; pushScope = None; replaceScopes = None; severity = None; requiredScopes = requiredScopes; comparison = false; referenceDetails = None; keyRequiredQuotes = false; valueRequiredQuotes = false}
+            {min = 0; max = 100; strictMin = true; leafvalue = false; description = None; pushScope = None; replaceScopes = None; severity = None; requiredScopes = requiredScopes; comparison = false; referenceDetails = None; keyRequiredQuotes = false; valueRequiredQuotes = false; typeHint = None}
         lookup.coreModifiers
             |> List.map (fun c -> AliasRule ("modifier", NewRule(LeafRule(CWTools.Rules.RulesParser.specificField c.tag, ValueField (ValueType.Float (-1E+12M, 1E+12M))), modifierOptions c)))
 
     let addTriggerDocsScopes (lookup : Lookup) (rules : RootRule list) =
-            let scriptedOptions (effect : ScriptedEffect) =
-                {min = 0; max = 100; strictMin = true; leafvalue = false; description = Some effect.Comments; pushScope = None; replaceScopes = None; severity = None; requiredScopes = effect.Scopes; comparison = false; referenceDetails = None; keyRequiredQuotes = false; valueRequiredQuotes = false}
+            let scriptedOptions (scripted : string) (effect : ScriptedEffect) =
+                {min = 0; max = 100; strictMin = true; leafvalue = false; description = Some effect.Comments; pushScope = None; replaceScopes = None; severity = None; requiredScopes = effect.Scopes; comparison = false; referenceDetails = None; keyRequiredQuotes = false; valueRequiredQuotes = false; typeHint = Some (scripted, true)}
             let getAllScriptedEffects =
                 lookup.onlyScriptedEffects |> List.choose (function | :? ScriptedEffect as se -> Some se |_ -> None)
-                                                |> List.map (fun se -> AliasRule("effect", NewRule(LeafRule(CWTools.Rules.RulesParser.specificField se.Name, ValueField(ValueType.Bool)), scriptedOptions se)))
+                                                |> List.map (fun se -> AliasRule("effect", NewRule(LeafRule(CWTools.Rules.RulesParser.specificField se.Name, ValueField(ValueType.Bool)), scriptedOptions "scripted_effect" se)))
             let getAllScriptedTriggers =
                 lookup.onlyScriptedTriggers |> List.choose (function | :? ScriptedEffect as se -> Some se |_ -> None)
-                                                |> List.map (fun se -> AliasRule("trigger", NewRule(LeafRule(CWTools.Rules.RulesParser.specificField se.Name, ValueField(ValueType.Bool)), scriptedOptions se)))
+                                                |> List.map (fun se -> AliasRule("trigger", NewRule(LeafRule(CWTools.Rules.RulesParser.specificField se.Name, ValueField(ValueType.Bool)), scriptedOptions "scripted_trigger" se)))
             let addRequiredScopesE (s : StringTokens) (o : Options) =
                 let newScopes =
                     match o.requiredScopes with
@@ -212,12 +206,12 @@ module STLGameFunctions =
             configs |> List.tryFind (fun (fn, _) -> Path.GetFileName fn = "trigger_docs.log")
                     |> Option.map (fun (fn, ft) -> DocsParser.parseDocsFile fn)
                     |> Option.bind ((function |FParsec.CharParsers.ParserResult.Success(p, _, _) -> Some (DocsParser.processDocs scopeManager.ParseScopes p) |FParsec.CharParsers.ParserResult.Failure(e, _, _) -> eprintfn "%A" e; None))
-                    |> Option.defaultWith (fun () -> eprintfn "trigger_docs.log was not found in stellaris config"; ([], []))
+                    |> Option.defaultWith (fun () -> Utils.logError "trigger_docs.log was not found in stellaris config"; ([], []))
         let modifiers =
             configs |> List.tryFind (fun (fn, _) -> Path.GetFileName fn = "setup.log")
                     |> Option.map (fun (fn, ft) -> SetupLogParser.parseLogsFile fn)
                     |> Option.bind ((function |FParsec.CharParsers.ParserResult.Success(p, _, _) -> Some (SetupLogParser.processLogs p) |FParsec.CharParsers.ParserResult.Failure(e, _, _) -> None))
-                    |> Option.defaultWith (fun () -> eprintfn "setup.log was not found in stellaris config"; ([]))
+                    |> Option.defaultWith (fun () -> Utils.logError "setup.log was not found in stellaris config"; ([]))
         let stlLocCommands =
             configs |> List.tryFind (fun (fn, _) -> Path.GetFileName fn = "localisation.cwt")
                     |> Option.map (fun (fn, ft) -> UtilityParser.loadLocCommands fn ft)
@@ -225,7 +219,7 @@ module STLGameFunctions =
         let stlEventTargetLinks =
             configs |> List.tryFind (fun (fn, _) -> Path.GetFileName fn = "links.cwt")
                     |> Option.map (fun (fn, ft) -> UtilityParser.loadEventTargetLinks scopeManager.AnyScope (scopeManager.ParseScope()) scopeManager.AllScopes fn ft)
-                    |> Option.defaultValue (CWTools.Process.Scopes.STL.scopedEffects() |> List.map SimpleLink)
+                    |> Option.defaultValue ([])
 
         {
             triggers = triggers
@@ -246,7 +240,7 @@ type STLGame (setupSettings : StellarisSettings) =
     let validationSettings = {
         validators = [validateVariables, "var"; valTechnology, "tech"; validateTechnologies, "tech2"; valButtonEffects, "but"; valSprites, "sprite"; valVariables, "var2"; valEventCalls, "event";
                             validateAmbientGraphics, "ambient"; validateShipDesigns, "designs"; validateSolarSystemInitializers, "solar";
-                             validateIfElse, "ifelse2"; validatePlanetKillers, "pk"; validateRedundantAND, "AND"; valMegastructureGraphics, "megastructure";
+                             validateIfElse, "ifelse2"; validatePlanetKillers, "pk"; validateRedundantANDWithNOR, "AND"; valMegastructureGraphics, "megastructure";
                             valPlanetClassGraphics, "pcg"; validateDeprecatedSetName, "setname"; validateShips, "ships"; validateEvents, "eventsSimple"; validateNOTMultiple, "not"; validatePreTriggers, "pre";
                             validateIfWithNoEffect, "ifnoeffect";]
         experimentalValidators = [valSectionGraphics, "sections"; valComponentGraphics, "component"]
@@ -281,12 +275,16 @@ type STLGame (setupSettings : StellarisSettings) =
             initialLookup = STLLookup()
             maxFileSize = setupSettings.maxFileSize
         }
-        do if scopeManager.Initialized |> not then eprintfn "%A has no scopes" (settings.rootDirectories |> List.head) else ()
-        let locSettings = settings.embedded.localisationCommands |> function |Legacy (l, v) -> (if l.Length = 0 then Legacy (locCommands()) else Legacy (l, v)) |_ -> Legacy (locCommands())
+        do if scopeManager.Initialized |> not then Utils.logError (sprintf "%A has no scopes" (settings.rootDirectories |> List.head)) else ()
+        let locSettings = settings.embedded.localisationCommands |> function |Legacy (l, v) -> (if l.Length = 0 then Legacy ([],[]) else Legacy (l, v)) |_ -> Legacy ([],[])
 
         let settings = { settings with validation = { settings.validation with langs = STL STLLang.Default::settings.validation.langs }
                                        embedded = { settings.embedded with localisationCommands = locSettings }
                                        initialLookup = STLLookup()}
+
+        let legacyLocDataTypes = settings.embedded.localisationCommands |> function | Legacy (c, v) -> (c, v)| _ -> ([], [])
+        let processLocalisationFunction lookup = (createLocalisationFunctions STL.locStaticSettings createLocDynamicSettings legacyLocDataTypes  lookup) |> fst
+        let validationLocalisationCommandFunction lookup = (createLocalisationFunctions STL.locStaticSettings createLocDynamicSettings legacyLocDataTypes  lookup) |> snd
 
 
         let rulesManagerSettings = {
@@ -302,16 +300,16 @@ type STLGame (setupSettings : StellarisSettings) =
             refreshConfigBeforeFirstTypesHook = refreshConfigBeforeFirstTypesHook
             refreshConfigAfterFirstTypesHook = refreshConfigAfterFirstTypesHook
             refreshConfigAfterVarDefHook = refreshConfigAfterVarDefHook
-            processLocalisation = STLGameFunctions.processLocalisationFunction (settings.embedded.localisationCommands |> function |Legacy (c, v) -> c, v |_ -> ([], []))
-            validateLocalisation = STLGameFunctions.validateLocalisationCommandFunction (settings.embedded.localisationCommands |> function |Legacy (c, v) -> c, v |_ -> ([], []))
+            processLocalisation = processLocalisationFunction
+            validateLocalisation = validationLocalisationCommandFunction
         }
 
         let game = GameObject<STLComputedData, STLLookup>.CreateGame
                     (settings, "stellaris", scriptFolders, Compute.STL.computeSTLData,
                     Compute.STL.computeSTLDataUpdate,
                      (STLLocalisationService >> (fun f -> f :> ILocalisationAPICreator)),
-                     STLGameFunctions.processLocalisationFunction (settings.embedded.localisationCommands |> function |Legacy (c, v) -> c, v |_ -> ([], [])),
-                     STLGameFunctions.validateLocalisationCommandFunction (settings.embedded.localisationCommands |> function |Legacy (c, v) -> c, v |_ -> ([], [])),
+                     processLocalisationFunction,
+                     validationLocalisationCommandFunction,
                      defaultContext,
                      noneContext,
                      Encoding.UTF8,

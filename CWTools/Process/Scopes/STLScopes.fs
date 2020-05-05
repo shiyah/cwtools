@@ -9,97 +9,13 @@ module STL =
     open CWTools.Utilities.Utils
     open Microsoft.FSharp.Collections.Tagged
 
-//         COUNTRY:
-// space_owner
-// overlord
-// defender
-// attacker
-// owner
-// controller
-// planet_owner
-// last_created_country
-// last_refugee_country
-
-// LEADER:
-// leader
-// last_created_leader
-// ruler
-// heir
-
-// GALACTIC_OBJECT:
-// solar_system
-// last_created_system
-
-// PLANET:
-// planet
-// capital_scope
-// orbit
-// home_planet
-// star
-
-// SHIP:
-// last_created_ship
-
-// FLEET:
-// spaceport
-// mining_station
-// research_station
-// last_created_fleet
-// fleet
-
-// POP:
-// pop
-// last_created_pop
-
-// AMBIENT_OBJECT:
-// last_created_ambient_object
-
-// ARMY:
-// last_created_army
-
-// TILE:
-// tile
-// orbital_deposit_tile
-// best_tile_for_pop
-
-// SPECIES:
-// owner_species
-// last_created_species
-// species
-
-// POP_FACTION:
-// pop_faction
-// last_created_pop_faction
-
-// SECTOR:
-// core_sector
-// sector
-
-// LEADER:
-
-// ALLIANCE:
-// alliance
-
-// RELATIVE SCOPES:
-// root
-// from
-// prev
-// prevprev
-// prevprevprev
-// prevprevprevprev
-// fromfrom
-// fromfromfrom
-// fromfromfromfrom
-// this
-// event_target:
-// parameter:
     let defaultDesc = "Scope (/context) switch"
     let scopedEffects() = [
         ScopedEffect("space_owner", [scopeManager.ParseScope() "Ship"; scopeManager.ParseScope() "Fleet"; scopeManager.ParseScope() "GalacticObject"; scopeManager.ParseScope() "Planet"], scopeManager.ParseScope() "Country", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("overlord", [scopeManager.ParseScope() "Country"], scopeManager.ParseScope() "Country", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("defender", [scopeManager.ParseScope() "War"], scopeManager.ParseScope() "Country", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("attacker", [scopeManager.ParseScope() "War"], scopeManager.ParseScope() "Country", EffectType.Link, defaultDesc, "", true);
-        ScopedEffect("owner", [scopeManager.ParseScope() "Species" ;scopeManager.ParseScope() "Ship"; scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Fleet"; scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "PopFaction"; scopeManager.ParseScope() "Sector"; scopeManager.ParseScope() "Leader"; scopeManager.ParseScope() "Country"; scopeManager.ParseScope() "Starbase"; scopeManager.ParseScope() "Tile"; scopeManager.ParseScope() "GalacticObject"], scopeManager.ParseScope() "Country", EffectType.Link, "", "", true); //Fleet, Planet, PopFaction, Sector, Leader, Country, Tile from vanilla use
+        ScopedEffect("owner", [scopeManager.ParseScope() "Species" ;scopeManager.ParseScope() "Ship"; scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Fleet"; scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "PopFaction"; scopeManager.ParseScope() "Sector"; scopeManager.ParseScope() "Leader"; scopeManager.ParseScope() "Country"; scopeManager.ParseScope() "Starbase"; scopeManager.ParseScope() "GalacticObject"], scopeManager.ParseScope() "Country", EffectType.Link, "", "", true); //Fleet, Planet, PopFaction, Sector, Leader, Country, Tile from vanilla use
         ScopedEffect("controller", [scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "Starbase"], scopeManager.ParseScope() "Country", EffectType.Link, "", "", true); //Removed controller of country
         ScopedEffect("planet_owner", [scopeManager.ParseScope() "Planet"], scopeManager.ParseScope() "Country", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("last_created_country", scopeManager.AllScopes, scopeManager.ParseScope() "Country", EffectType.Link, defaultDesc, "", true);
@@ -108,7 +24,7 @@ module STL =
         ScopedEffect("last_created_leader", scopeManager.AllScopes, scopeManager.ParseScope() "Leader", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("solar_system", scopeManager.AllScopes, scopeManager.ParseScope() "GalacticObject", EffectType.Link, "", "", true);
         ScopedEffect("last_created_system", scopeManager.AllScopes, scopeManager.ParseScope() "GalacticObject", EffectType.Link, defaultDesc, "", true);
-        ScopedEffect("planet", [scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Tile"; scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "GalacticObject"; scopeManager.ParseScope() "Army"; scopeManager.ParseScope() "Megastructure"], scopeManager.ParseScope() "Planet", EffectType.Link, defaultDesc, "", true);
+        ScopedEffect("planet", [scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "GalacticObject"; scopeManager.ParseScope() "Army"; scopeManager.ParseScope() "Megastructure"], scopeManager.ParseScope() "Planet", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("capital_scope", [scopeManager.ParseScope() "Country"; scopeManager.ParseScope() "Sector"], scopeManager.ParseScope() "Planet", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("orbit", [scopeManager.ParseScope() "Fleet"; scopeManager.ParseScope() "Ship"; scopeManager.ParseScope() "Megastructure"; scopeManager.ParseScope() "Army"], scopeManager.ParseScope() "Planet", EffectType.Link, defaultDesc, "", true); // Megastructure not in PDX list
         ScopedEffect("home_planet", [scopeManager.ParseScope() "Country"; scopeManager.ParseScope() "Species"; scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Planet"], scopeManager.ParseScope() "Planet", EffectType.Link, defaultDesc, "", true); // Planet not in PDX list
@@ -118,15 +34,11 @@ module STL =
         ScopedEffect("research_station", [scopeManager.ParseScope() "Planet"], scopeManager.ParseScope() "Fleet", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("last_created_fleet", scopeManager.AllScopes, scopeManager.ParseScope() "Fleet", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("fleet", [scopeManager.ParseScope() "Ship"; scopeManager.ParseScope() "Starbase"; scopeManager.ParseScope() "Leader"; scopeManager.ParseScope() "Army"], scopeManager.ParseScope() "Fleet", EffectType.Link, defaultDesc, "", true);
-        ScopedEffect("pop", [scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Tile"], scopeManager.ParseScope() "Pop", EffectType.Link, defaultDesc, "", true);
+        ScopedEffect("pop", [scopeManager.ParseScope() "Pop"], scopeManager.ParseScope() "Pop", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("last_created_pop", scopeManager.AllScopes, scopeManager.ParseScope() "Pop", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("last_created_ambient_object", scopeManager.AllScopes, scopeManager.ParseScope() "AmbientObject", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("last_created_army", scopeManager.AllScopes, scopeManager.ParseScope() "Army", EffectType.Link, defaultDesc, "", true);
-        // ScopedEffect("tile", [scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Tile"], scopeManager.ParseScope() "Tile", EffectType.Link, defaultDesc, "", true);
-        // ScopedEffect("orbital_deposit_tile", [scopeManager.ParseScope() "Planet"], scopeManager.ParseScope() "Tile", EffectType.Link, defaultDesc, "", true);
-        // ScopedEffect("best_tile_for_pop", [scopeManager.ParseScope() "Planet"], scopeManager.ParseScope() "Tile", EffectType.Link, defaultDesc, "", true);
-        //ScopedEffect("owner_species", [scopeManager.ParseScope() "Species" ;scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Leader"; scopeManager.ParseScope() "Country"], scopeManager.ParseScope() "Species", EffectType.Link, "", "", true); //PDX list
-        ScopedEffect("owner_species", [scopeManager.ParseScope() "Species" ;scopeManager.ParseScope() "Ship"; scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Fleet"; scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "PopFaction"; scopeManager.ParseScope() "Sector"; scopeManager.ParseScope() "Leader"; scopeManager.ParseScope() "Country"; scopeManager.ParseScope() "Starbase"; scopeManager.ParseScope() "Tile"; scopeManager.ParseScope() "GalacticObject"], scopeManager.ParseScope() "Species", EffectType.Link, "", "", true); //Copied owner
+        ScopedEffect("owner_species", [scopeManager.ParseScope() "Species" ;scopeManager.ParseScope() "Ship"; scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Fleet"; scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "PopFaction"; scopeManager.ParseScope() "Sector"; scopeManager.ParseScope() "Leader"; scopeManager.ParseScope() "Country"; scopeManager.ParseScope() "Starbase"; scopeManager.ParseScope() "GalacticObject"], scopeManager.ParseScope() "Species", EffectType.Link, "", "", true); //Copied owner
         ScopedEffect("last_created_species", scopeManager.AllScopes, scopeManager.ParseScope() "Species", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("species", [scopeManager.ParseScope() "Country"; scopeManager.ParseScope() "Ship"; scopeManager.ParseScope() "Leader"; scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Army"], scopeManager.ParseScope() "Species", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("pop_faction", [scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Leader"], scopeManager.ParseScope() "PopFaction", EffectType.Link, defaultDesc, "", true); //Leader from vanilla
@@ -134,8 +46,8 @@ module STL =
         ScopedEffect("default_pop_faction", scopeManager.AllScopes, scopeManager.ParseScope() "PopFaction", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("sector", [scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "GalacticObject"; scopeManager.ParseScope() "Leader"], scopeManager.ParseScope() "Sector", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("core_sector", [scopeManager.ParseScope() "Country"], scopeManager.ParseScope() "Sector", EffectType.Link, defaultDesc, "", true);
-        ScopedEffect("ruler", [scopeManager.ParseScope() "Country"; scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "Tile"], scopeManager.ParseScope() "Leader", EffectType.Link, defaultDesc, "", true);
-        ScopedEffect("heir", [scopeManager.ParseScope() "Country"; scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "Tile"], scopeManager.ParseScope() "Leader", EffectType.Link, defaultDesc, "", true);
+        ScopedEffect("ruler", [scopeManager.ParseScope() "Country"; scopeManager.ParseScope() "Planet"], scopeManager.ParseScope() "Leader", EffectType.Link, defaultDesc, "", true);
+        ScopedEffect("heir", [scopeManager.ParseScope() "Country"; scopeManager.ParseScope() "Planet"], scopeManager.ParseScope() "Leader", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("alliance", [scopeManager.ParseScope() "Country"], scopeManager.ParseScope() "Alliance", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("star", [scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "Ship"; scopeManager.ParseScope() "Fleet"; scopeManager.ParseScope() "GalacticObject";], scopeManager.ParseScope() "Planet", EffectType.Link, defaultDesc, "", true); //PDX List
         //ScopedEffect("star", [scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "Ship"; scopeManager.ParseScope() "Fleet"; scopeManager.ParseScope() "AmbientObject"; scopeManager.ParseScope() "Megastructure"; scopeManager.ParseScope() "GalacticObject"; scopeManager.ParseScope() "Starbase"], scopeManager.ParseScope() "Planet", EffectType.Link, defaultDesc, "", true);
@@ -144,40 +56,13 @@ module STL =
         ScopedEffect("capital_star", [scopeManager.ParseScope() "Country"], scopeManager.ParseScope() "Planet", EffectType.Link, defaultDesc, "", true);
         ScopedEffect("no_scope", scopeManager.AllScopes, scopeManager.ParseScope() "Any", EffectType.Link, defaultDesc, "", true)
         ScopedEffect("megastructure", scopeManager.AllScopes, scopeManager.ParseScope() "Megastructure", EffectType.Link, defaultDesc, "", true)
-        ScopedEffect("owner_main_species", [scopeManager.ParseScope() "Species" ;scopeManager.ParseScope() "Ship"; scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Fleet"; scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "PopFaction"; scopeManager.ParseScope() "Sector"; scopeManager.ParseScope() "Leader"; scopeManager.ParseScope() "Country"; scopeManager.ParseScope() "Starbase"; scopeManager.ParseScope() "Tile"; scopeManager.ParseScope() "GalacticObject"], scopeManager.ParseScope() "Species", EffectType.Link, defaultDesc, "", true) //Copied owner
+        ScopedEffect("owner_main_species", [scopeManager.ParseScope() "Species" ;scopeManager.ParseScope() "Ship"; scopeManager.ParseScope() "Pop"; scopeManager.ParseScope() "Fleet"; scopeManager.ParseScope() "Planet"; scopeManager.ParseScope() "PopFaction"; scopeManager.ParseScope() "Sector"; scopeManager.ParseScope() "Leader"; scopeManager.ParseScope() "Country"; scopeManager.ParseScope() "Starbase"; scopeManager.ParseScope() "GalacticObject"], scopeManager.ParseScope() "Species", EffectType.Link, defaultDesc, "", true) //Copied owner
         ScopedEffect("system_star", [scopeManager.ParseScope() "GalacticObject"], scopeManager.ParseScope() "Planet", EffectType.Link, defaultDesc, "", true); // Not in PDX
         ScopedEffect("observation_outpost_owner", scopeManager.AllScopes, scopeManager.ParseScope() "Country", EffectType.Link, defaultDesc, "", true); // Not in PDX
         ScopedEffect("branch_office_owner", [scopeManager.ParseScope() "Planet"], scopeManager.ParseScope() "Country", EffectType.Link, defaultDesc, "", true); // New with 2.2
 
 
     ]
-// any/every/random_ship
-// any/every/random_pop
-// any/every/random_owned_ship
-// any/every/random_owned_planet
-// any/every/random_controlled_planet
-// any/every/random_war_defender
-// any/every/random_war_attacker
-// any/every/random_planet
-// any/every/random_planet_within_border
-// any/every/random_ambient_object
-// any/every/random_system_ambient_object
-// any/every/random_mining_station
-// any/every/random_research_station
-// any/every/random_spaceport
-// any/every/random_system_planet
-// any/every/random_neighboring_tile
-// any/every/random_tile
-// any/every/random_neighbor_system
-// any/every/random_moon
-// any/every/random_system_in_cluster
-// any/every/random_owned_leader
-// any/every/random_sector
-// any/every/random_owned_fleet
-// any/every/random_fleet_in_system
-// any/every/random_pop_faction
-// any/every/random_playable_country
-// any/every/random_subject
     let effectInnerScopes() =[
         //These are from blackninja9939
         "any_ship",  scopeManager.ParseScope() "Ship";
@@ -248,14 +133,6 @@ module STL =
         "any_system_planet",  scopeManager.ParseScope() "Planet";
         "every_system_planet",  scopeManager.ParseScope() "Planet";
         "random_system_planet",  scopeManager.ParseScope() "Planet";
-
-        "any_neighboring_tile",  scopeManager.ParseScope() "Tile";
-        "every_neighboring_tile",  scopeManager.ParseScope() "Tile";
-        "random_neighboring_tile",  scopeManager.ParseScope() "Tile";
-
-        "any_tile",  scopeManager.ParseScope() "Tile";
-        "every_tile",  scopeManager.ParseScope() "Tile";
-        "random_tile",  scopeManager.ParseScope() "Tile";
 
         "any_moon",  scopeManager.ParseScope() "Planet";
         "every_moon",  scopeManager.ParseScope() "Planet";

@@ -65,15 +65,27 @@ namespace CWToolsCSTests
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
             //Parse event file
-            var parsed = CWTools.Parser.CKParser.parseEventFile("./testevent.txt");
+            // var parsed = CWTools.Parser.CKParser.parseEventFile("./testevent.txt");
+            var text2 = File.ReadAllText("./testevent2.txt");
+            var parsed2 = CWTools.CSharp.Parsers.ParseScriptFile("testevent2.txt", text2);
+
+            var eventFile2 = parsed2.GetError();
+            Console.WriteLine(eventFile2.ErrorMessage);
+
+
+            //Parse event file
+            // var parsed = CWTools.Parser.CKParser.parseEventFile("./testevent.txt");
+            var text = File.ReadAllText("./testevent.txt");
+            var parsed = CWTools.CSharp.Parsers.ParseScriptFile("testevent.txt", text);
 
             var eventFile = parsed.GetResult();
 
             //"Process" result into nicer format
-            var processed = CK2Process.processEventFile(eventFile);
+            // var processed = CK2Process.processEventFile(eventFile);
+            var processed = CWTools.CSharp.Parsers.ProcessStatements("testevent.txt", "./testevent.txt", eventFile);
 
             //Find interesting event
-            var myEvent = processed.Events.FirstOrDefault(x => x.ID == "test.1");
+            var myEvent = processed.Nodes.FirstOrDefault(x => x.TagText("id") == "test.1");
 
             //Add is_triggered_only = true
             var leaf = new Leaf(KeyValueItem.NewKeyValueItem(Key.NewKey("is_triggered_only"), Value.NewBool(true), Operator.Equals), FSharpOption<range>.None);
@@ -83,11 +95,15 @@ namespace CWToolsCSTests
 
             //Output
             var output = processed.ToRaw;
-            Console.WriteLine(CKPrinter.printKeyValueList(output, 0));
+            Console.WriteLine(CKPrinter.api.prettyPrintStatement.Invoke(output));
+            Console.WriteLine(output.PrettyPrint());
             PrintfModule
                 .PrintFormatLine(
-                    new PrintfFormat<FSharpFunc<FSharpList<Statement>, Unit>, TextWriter, Unit, Unit, FSharpList<Statement>>("%A"))
+                    new PrintfFormat<FSharpFunc<Statement, Unit>, TextWriter, Unit, Unit, Statement>("%A"))
                 .Invoke(output);
+
+            var test = processed.Nodes.FirstOrDefault().ToRaw;
+            Console.WriteLine(CKPrinter.api.prettyPrintStatement.Invoke(test));
         }
     }
 }

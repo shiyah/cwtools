@@ -67,15 +67,16 @@ let requiredSingle = RulesParser.requiredSingle
 let defaultFloat = RulesParser.defaultFloat
 let defaultInt = RulesParser.defaultInt
 let parseConfig = RulesParser.parseConfig
-let dynamicSettings =
+let dynamicSettings (_) =
     {
             CWTools.Process.Localisation.LegacyLocDynamicsSettings.scriptedLocCommands = []
             CWTools.Process.Localisation.LegacyLocDynamicsSettings.eventTargets = []
             CWTools.Process.Localisation.LegacyLocDynamicsSettings.setVariables = []
     }
 
-let processLocalisation = CWTools.Validation.Stellaris.STLLocalisationString.processLocalisation [] [] dynamicSettings
-let validateLocalisation = STLLocalisationString.validateLocalisationCommand [] [] dynamicSettings
+let processLocalisation = (CWTools.Games.Helpers.createLocalisationFunctions CWTools.Process.Localisation.STL.locStaticSettings dynamicSettings ([], [])  (STLLookup())) |> fst
+let validateLocalisation = (CWTools.Games.Helpers.createLocalisationFunctions CWTools.Process.Localisation.STL.locStaticSettings dynamicSettings ([], [])  (STLLookup())) |> snd
+
 let createStarbase() =
     let owner = NewRule (LeafRule(specificField "owner", ScopeField (scopeManager.AnyScope)), requiredSingle)
     let size = NewRule (LeafRule(specificField "size", ValueField(ValueType.Enum "size")), requiredSingle)
@@ -499,7 +500,7 @@ let testsv =
                 let bnode = (STLProcess.shipProcess.ProcessNode() "root" (mkZeroFile "common/ship_behaviors/test.txt") b)
                 let be = { entity = bnode; filepath = "/test/stellaris/common/ship_behaviors/test.txt"; logicalpath = "common/ship_behaviors/test.txt"; validate = false; entityType = EntityType.ShipBehaviors; overwrite = Overwrite.No}
                 let ruleapplicator = RuleValidationService([TypeRule ("create_starbase", createStarbase())], [], Map.empty, Map.empty, Map.empty, [], Set.empty, effectMap, effectMap, (scopeManager.ParseScope() "Any"), changeScope, defaultContext, STL STLLang.Default, processLocalisation, validateLocalisation)
-                let typeinfo = CWTools.Rules.RulesHelpers.getTypesFromDefinitions ruleapplicator [shipBehaviorType; shipSizeType] [be] |> Map.toSeq |> Seq.map (fun (k, s) -> k, StringSet.Create(InsensitiveStringComparer(), (s |> List.map (fun s -> s.id)))) |> Map.ofSeq
+                let typeinfo = CWTools.Rules.RulesHelpers.getTypesFromDefinitions (Some ruleapplicator) [shipBehaviorType; shipSizeType] [be] |> Map.toSeq |> Seq.map (fun (k, s) -> k, StringSet.Create(InsensitiveStringComparer(), (s |> List.map (fun s -> s.id)))) |> Map.ofSeq
                 eprintfn "%A" typeinfo
                 let node = (STLProcess.shipProcess.ProcessNode() "root" (mkZeroFile "common/ship_sizes/test.txt") r)
                 let entity = { filepath = "common/ship_sizes/test.txt"; logicalpath = "common/ship_sizes/test.txt"; entity = node; validate = true; entityType = EntityType.Events; overwrite = Overwrite.No}
@@ -603,7 +604,7 @@ let testsv =
 let testsConfig =
     testList "full config" [
         testCase "basic" <| fun () ->
-            let configtext = ["./testfiles/configtests/test.cwt", File.ReadAllText "./testfiles/configtests/test.cwt"]
+            let configtext = ["./testfiles/configtests/config/test.cwt", File.ReadAllText "./testfiles/configtests/config/test.cwt"]
             let configtext = ("./testfiles/validationtests/trigger_docs.log", File.ReadAllText "./testfiles/validationtests/trigger_docs.log")::configtext
             let configtext = ("./testfiles/validationtests/setup.log", File.ReadAllText "./testfiles/validationtests/setup.log")::configtext
 
@@ -628,7 +629,7 @@ let testsConfig =
             Expect.sequenceEqual suggestions expected "Completion should match"
 
         testCase "basic with config load" <| fun () ->
-            let configtext = ["./testfiles/configtests/test.cwt", File.ReadAllText "./testfiles/configtests/test.cwt"]
+            let configtext = ["./testfiles/configtests/config/test.cwt", File.ReadAllText "./testfiles/configtests/config/test.cwt"]
             let configtext = ("./testfiles/validationtests/trigger_docs.log", File.ReadAllText "./testfiles/validationtests/trigger_docs.log")::configtext
             let configtext = ("./testfiles/validationtests/setup.log", File.ReadAllText "./testfiles/validationtests/setup.log")::configtext
             let folder = "./testfiles/configtests/completiontests"
@@ -650,7 +651,7 @@ let testsConfig =
             Expect.sequenceEqual suggestions expected "Completion should match"
 
         testCase "shipsize prerequisits" <| fun () ->
-            let configtext = ["./testfiles/configtests/test.cwt", File.ReadAllText "./testfiles/configtests/test.cwt"]
+            let configtext = ["./testfiles/configtests/config/test.cwt", File.ReadAllText "./testfiles/configtests/config/test.cwt"]
             let configtext = ("./testfiles/validationtests/trigger_docs.log", File.ReadAllText "./testfiles/validationtests/trigger_docs.log")::configtext
             let configtext = ("./testfiles/validationtests/setup.log", File.ReadAllText "./testfiles/validationtests/setup.log")::configtext
             let folder = "./testfiles/configtests/completiontests"
@@ -672,7 +673,7 @@ let testsConfig =
             Expect.sequenceEqual suggestions expected "Completion should match"
 
         testCase "shipsize enum" <| fun () ->
-            let configtext = ["./testfiles/configtests/test.cwt", File.ReadAllText "./testfiles/configtests/test.cwt"]
+            let configtext = ["./testfiles/configtests/config/test.cwt", File.ReadAllText "./testfiles/configtests/config/test.cwt"]
             let configtext = ("./testfiles/validationtests/trigger_docs.log", File.ReadAllText "./testfiles/validationtests/trigger_docs.log")::configtext
             let configtext = ("./testfiles/validationtests/setup.log", File.ReadAllText "./testfiles/validationtests/setup.log")::configtext
             let folder = "./testfiles/configtests/completiontests"
