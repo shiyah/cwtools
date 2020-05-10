@@ -90,7 +90,7 @@ module LocalisationString =
             let newLine = pchar '\n'
             let lineBreak = newLine >>. newline
             let paragraph = many1Satisfy (isNoneOf "\r\n")
-            let descParser = paragraph <|> many1Strings (paragraph >>. ((newline |>> string) <|> (lineBreak |>> string))) >>. paragraph
+            let descParser = (attempt paragraph) <|> attempt (many1Strings (paragraph >>. ((newline |>> string) <|> (lineBreak |>> string)))) >>. paragraph
             let parserResult = runParserOnString descParser () e.key e.desc
             match parserResult with
                 | Success(_) -> OK
