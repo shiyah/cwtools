@@ -1,3 +1,4 @@
 ﻿l_english:
  required:0 "test_required"
  test_required_desc:0 "test_required"
+ test_paragraph_double_newline:0 "test\n\ntest2"
